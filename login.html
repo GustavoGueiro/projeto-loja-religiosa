@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Loja Religiosa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #0ea5e9;
+      --shadow: 0 10px 25px rgba(2, 6, 23, .06);
+      --radius: 20px;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: "Inter", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: var(--text);
+    }
+
+    .login-box {
+      background: var(--card);
+      padding: 40px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .btn:hover {
+      filter: brightness(.95);
+    }
+
+    small {
+      color: var(--muted);
+      display: block;
+      margin-top: 10px;
+   }
+   .admin-check {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 20px;
+}
+
+.admin-check label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.admin-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0ea5e9; /* cor azul igual ao botão */
+  cursor: pointer;
+  transform: translateY(1px);
+}
+
+  </style>
+  </head>
+<body>
+  <div class="login-box">
+    <h1>✝ Loja Religiosa</h1>
+
+    <input type="text" id="usuario" placeholder="Usuário" />
+    <input type="password" id="senha" placeholder="Senha" />
+
+   <div class="admin-check">
+  <label for="isAdmin">
+    <input type="checkbox" id="isAdmin">
+    Sou administrador
+  </label>
+</div>
+
+
+    <button class="btn" id="entrar">Entrar</button>
+    <small>Para teste: marque “Sou administrador” e entre com qualquer usuário/senha.</small>
+  </div>
+
+  <script>
+    document.getElementById("entrar").addEventListener("click", () => {
+      const usuario = document.getElementById("usuario").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      const isAdmin = document.getElementById("isAdmin").checked;
+
+      if (!usuario || !senha) {
+        alert("Preencha usuário e senha!");
+        return;
+      }
+
+      // Simula autenticação
+      const role = isAdmin ? "admin" : "cliente";
+      localStorage.setItem("usuario", usuario);
+      localStorage.setItem("role", role);
+
+      window.location.href = "loja.html";
+    });
+  </script>
+</body>
+</html>

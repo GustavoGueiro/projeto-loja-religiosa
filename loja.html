@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loja Religiosa</title>
+
+  <!-- Fonte -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js para o dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+      --primary:#0ea5e9; --shadow:0 10px 25px rgba(2,6,23,.06);
+      --shadow-hover:0 14px 32px rgba(2,6,23,.12); --radius:20px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; height:100vh; display:flex; background:var(--bg);
+      color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+
+    /* Sidebar */
+    aside{
+      width:260px; background:var(--card); padding:22px 18px;
+      box-shadow:var(--shadow); display:flex; flex-direction:column; gap:18px;
+    }
+    .logo{font-weight:800;font-size:1.15rem}
+    .welcome-box{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+    .welcome-box .hello{display:block;color:var(--muted);font-size:.9rem;margin-bottom:4px}
+    #welcome-name{color:var(--primary);font-weight:700}
+
+    nav{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    nav button{
+      display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-radius:12px;
+      background:#f8fafc;border:1px solid #e2e8f0;color:#0f172a;cursor:pointer;font-weight:600;transition:.18s;
+    }
+    nav button:hover{background:var(--primary);color:#fff;border-color:transparent}
+    nav button.active{background:var(--primary);color:#fff;border-color:transparent}
+
+    .sidebar-footer{margin-top:auto}
+    .btn{padding:10px 14px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(14,165,233,.25)}
+    .btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-sair{background:#dc2626;box-shadow:0 6px 14px rgba(220,38,38,.2)}
+
+    /* Conteúdo */
+    main{flex:1;min-width:0;padding:30px 34px;overflow:auto}
+    h1{margin:0 0 8px 0;font-size:1.8rem}
+    #boas-vindas{margin:0 0 18px 0;color:var(--primary);font-weight:600}
+
+    /* Grade de produtos */
+    .grid{display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:8px}
+    .card{
+      background:var(--card);border:1px solid rgba(2,6,23,.06);border-radius:var(--radius);padding:12px;
+      box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s,border-color .18s;
+    }
+    .card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:rgba(2,6,23,.1)}
+    .thumb{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:16px;background:#f1f5f9;margin-bottom:12px}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s ease}
+    .card:hover .thumb img{transform:scale(1.04)}
+    .card h3{margin:2px 6px 4px;font-size:1.05rem;font-weight:800}
+    .card p{margin:0 6px 12px;color:var(--muted);font-size:.92rem;line-height:1.45;min-height:2.6em}
+    .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 6px 6px}
+    .price{font-weight:800}
+
+    /* Dashboard */
+    #sec-dashboard{display:none;margin-top:26px;background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+    #sec-dashboard h2{margin:0 0 12px 0}
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside>
+    <div>
+      <div class="logo">✝ Loja Religiosa</div>
+
+      <!-- Boas-vindas -->
+      <div class="welcome-box">
+        <span class="hello">🙏 Bem-vindo(a),</span>
+        <strong id="welcome-name">Visitante</strong>
+      </div>
+
+      <!-- Navegação -->
+      <nav>
+        <button id="btnInicio" type="button">🏠 Início</button>
+        <button id="btnCatalogo" type="button" class="active">📖 Catálogo</button>
+        <button id="btnDashboard" type="button" style="display:none;">📊 Dashboard</button>
+      </nav>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="sidebar-footer">
+      <small style="color:var(--muted);display:block;margin-bottom:8px">
+        Logado como <span id="role-label">Cliente</span>
+      </small>
+      <button id="btnSair" class="btn btn-sair" type="button">Sair</button>
+    </div>
+  </aside>
+
+  <!-- Conteúdo -->
+  <main>
+    <h1>Catálogo de Produtos</h1>
+    <p id="boas-vindas"></p>
+
+    <!-- Catálogo -->
+    <div id="produtos" class="grid"></div>
+
+    <!-- Dashboard (admin) -->
+    <section id="sec-dashboard">
+      <h2>Dashboard de Vendas</h2>
+      <canvas id="chartVendas" width="900" height="360"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const API_URL = 'http://localhost:8080/produtos';
+
+    async function carregarProdutos() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error('Erro ao carregar produtos');
+
+        const produtos = await res.json();
+        const el = document.getElementById('produtos');
+
+        el.innerHTML = produtos.map(p => {
+          const imgSrc = p.imagem && p.imagem.startsWith('http')
+            ? p.imagem
+            : `http://localhost:8080/${String(p.imagem || '').replace(/^\/?/, '')}`;
+
+          return `
+            <div class="card">
+              <div class="thumb">
+                <img
+                  src="${imgSrc}"
+                  alt="${p.nome}"
+                  referrerpolicy="no-referrer"
+                  onerror="this.onerror=null; this.src='https://picsum.photos/seed/erro/600/450';"
+                />
+              </div>
+              <h3>${p.nome}</h3>
+              <p>${p.descricao}</p>
+              <div class="meta">
+                <span class="price">R$ ${Number(p.preco).toFixed(2)}</span>
+                <button class="btn" type="button" onclick="alert('Produto comprado!')">Comprar</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        document.getElementById('produtos').innerHTML =
+          `<p style="color:#dc2626">Erro ao carregar produtos. Verifique se a API está rodando.</p>`;
+        console.error(e);
+      }
+    }
+
+    /* Troca de seções */
+    function setActive(buttonId) {
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      const b = document.getElementById(buttonId);
+      if (b) b.classList.add('active');
+    }
+    function mostrarCatalogo() {
+      document.getElementById('produtos').style.display = '';
+      document.getElementById('sec-dashboard').style.display = 'none';
+      setActive('btnCatalogo');
+    }
+    function mostrarDashboard() {
+      document.getElementById('produtos').style.display = 'none';
+      document.getElementById('sec-dashboard').style.display = '';
+      setActive('btnDashboard');
+      desenharGraficoVendas();
+    }
+
+    /* Gráfico simples (dados fictícios) */
+    function desenharGraficoVendas() {
+      const ctx = document.getElementById('chartVendas');
+      if (!ctx) return;
+      if (window.__graficoVendas) window.__graficoVendas.destroy();
+
+      window.__graficoVendas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Jan','Fev','Mar','Abr','Mai','Jun'],
+          datasets: [{
+            label: 'Vendas (R$)',
+            data: [1200, 1750, 1600, 2100, 1950, 2500]
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { display: true } }
+        }
+      });
+    }
+
+    /* Fluxo de login + listeners */
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = localStorage.getItem('usuario');
+      const role = localStorage.getItem('role') || 'cliente';
+
+      if (!usuario) {
+        alert('Você precisa fazer login primeiro.');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Boas-vindas e papel
+      const boas = document.getElementById('boas-vindas');
+      if (boas) boas.textContent = `🙏 Bem-vindo(a), ${usuario}!`;
+      document.getElementById('welcome-name').textContent = usuario;
+      document.getElementById('role-label').textContent = (role === 'admin') ? 'Administrador' : 'Cliente';
+
+      // Botões navegação
+      document.getElementById('btnInicio').addEventListener('click', () => {
+        mostrarCatalogo();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      document.getElementById('btnCatalogo').addEventListener('click', () => {
+        mostrarCatalogo();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      const btnDashboard = document.getElementById('btnDashboard');
+      if (role === 'admin') {
+        btnDashboard.style.display = '';
+        btnDashboard.addEventListener('click', () => {
+          mostrarDashboard();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      } else {
+        btnDashboard.style.display = 'none';
+      }
+
+      // Sair
+      document.getElementById('btnSair').addEventListener('click', () => {
+        if (confirm('Deseja realmente sair?')) {
+          localStorage.removeItem('usuario');
+          localStorage.removeItem('role');
+          window.location.href = 'login.html';
+        }
+      });
+
+      // Carrega catálogo por padrão
+      mostrarCatalogo();
+      carregarProdutos();
+
+      // Abrir direto no dashboard via query string (?view=dashboard)
+      const params = new URLSearchParams(location.search);
+      if (role === 'admin' && params.get('view') === 'dashboard') {
+        mostrarDashboard();
+      }
+    });
+  </script>
+</body>
+</html>
