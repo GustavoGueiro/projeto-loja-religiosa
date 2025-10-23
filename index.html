@@ -132,117 +132,122 @@
   </main>
 
   <script>
-    // Detecta base correta no GitHub Pages
-    const pathParts = location.pathname.split("/").filter(Boolean);
-    const repo = pathParts.length > 0 ? `/${pathParts[0]}` : "";
+  // Detecta o prefixo do repositório quando estiver no GitHub Pages (/projeto-loja-religiosa)
+  const pathParts = location.pathname.split("/").filter(Boolean);
+  const repo = pathParts.length > 0 ? `/${pathParts[0]}` : "";
 
-    // Troque aqui pelo seu endpoint real se usar Render etc.
-    const API_URL = 'https://projeto-loja-religiosa-json.onrender.com/produtos'; 
-    // (ou mantenha localhost:8080 se ainda estiver testando local)
+  // 🔗 Base da API: localhost em dev, Render em produção (sempre HTTPS)
+  const API_BASE =
+    location.hostname === "localhost" || location.hostname === "127.0.0.1"
+      ? "http://localhost:8080"
+      : "https://api-loja-religiosa.onrender.com";
 
-    async function carregarProdutos() {
-      try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error('Erro ao carregar produtos');
-        const produtos = await res.json();
-        const el = document.getElementById('produtos');
+  // ➜ URL final dos produtos (NÃO deixe vazio)
+  const API_URL = `${API_BASE}/produtos`;
 
-        el.innerHTML = produtos.map(p => {
-          const imgSrc = p.imagem && p.imagem.startsWith('http')
-            ? p.imagem
-            : `${repo}/${String(p.imagem || '').replace(/^\/?/, '')}`;
+  // Render do catálogo
+  async function carregarProdutos() {
+    try {
+      console.log("[catálogo] API_URL =", API_URL); // <-- deve logar ...onrender.com/produtos
+      const res = await fetch(API_URL, { mode: "cors", cache: "no-store" });
+      console.log("[catálogo] status =", res.status);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-          return `
-            <div class="card">
-              <div class="thumb">
-                <img
-                  src="${imgSrc}"
-                  alt="${p.nome}"
-                  referrerpolicy="no-referrer"
-                  onerror="this.onerror=null; this.src='https://picsum.photos/seed/erro/600/450';"
-                />
-              </div>
-              <h3>${p.nome}</h3>
-              <p>${p.descricao}</p>
-              <div class="meta">
-                <span class="price">R$ ${Number(p.preco).toFixed(2)}</span>
-                <button class="btn" type="button" onclick="alert('Produto comprado!')">Comprar</button>
-              </div>
+      const produtos = await res.json();
+      const el = document.getElementById("produtos");
+
+      el.innerHTML = produtos.map(p => {
+        const imgSrc = p.imagem && p.imagem.startsWith("http")
+          ? p.imagem
+          : `${repo}/${String(p.imagem || "").replace(/^\/?/, "")}`;
+
+        return `
+          <div class="card">
+            <div class="thumb">
+              <img
+                src="${imgSrc}"
+                alt="${p.nome}"
+                referrerpolicy="no-referrer"
+                onerror="this.onerror=null; this.src='https://picsum.photos/seed/erro/600/450';"
+              />
             </div>
-          `;
-        }).join('');
-      } catch (e) {
-        document.getElementById('produtos').innerHTML =
-          `<p style="color:#dc2626">Erro ao carregar produtos.</p>`;
-      }
+            <h3>${p.nome}</h3>
+            <p>${p.descricao}</p>
+            <div class="meta">
+              <span class="price">R$ ${Number(p.preco).toFixed(2)}</span>
+              <button class="btn" type="button">Comprar</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } catch (e) {
+      console.error("[catálogo] falha ao buscar API:", e);
+      document.getElementById("produtos").innerHTML =
+        `<p style="color:#dc2626">Erro ao carregar produtos.</p>`;
     }
+  }
 
-    function mostrarCatalogo() {
-      document.getElementById('produtos').style.display = '';
-      document.getElementById('sec-dashboard').style.display = 'none';
-    }
-    function mostrarDashboard() {
-      document.getElementById('produtos').style.display = 'none';
-      document.getElementById('sec-dashboard').style.display = '';
-      desenharGraficoVendas();
-    }
+  // Alterna seções
+  function mostrarCatalogo() {
+    document.getElementById("produtos").style.display = "";
+    document.getElementById("sec-dashboard")?.style && (document.getElementById("sec-dashboard").style.display = "none");
+  }
+  function mostrarDashboard() {
+    document.getElementById("produtos").style.display = "none";
+    document.getElementById("sec-dashboard").style.display = "";
+    desenharGraficoVendas();
+  }
 
-    function desenharGraficoVendas() {
-      const ctx = document.getElementById('chartVendas');
-      if (!ctx) return;
-      if (window.__graficoVendas) window.__graficoVendas.destroy();
-
-      window.__graficoVendas = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Jan','Fev','Mar','Abr','Mai','Jun'],
-          datasets: [{
-            label: 'Vendas (R$)',
-            data: [1200, 1750, 1600, 2100, 1950, 2500],
-            backgroundColor: '#0ea5e9'
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true } },
-          plugins: { legend: { display: true } }
-        }
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const usuario = localStorage.getItem('usuario');
-      const role = localStorage.getItem('role') || 'cliente';
-      if (!usuario) {
-        alert('Você precisa fazer login primeiro.');
-        window.location.href = `${repo}/login.html`;
-        return;
-      }
-
-      document.getElementById('welcome-name').textContent = usuario;
-      document.getElementById('role-label').textContent = role === 'admin' ? 'Administrador' : 'Cliente';
-
-      document.getElementById('btnSair').addEventListener('click', () => {
-        if (confirm('Deseja realmente sair?')) {
-          localStorage.clear();
-          window.location.href = `${repo}/login.html`;
-        }
-      });
-
-      document.getElementById('btnInicio').addEventListener('click', mostrarCatalogo);
-      document.getElementById('btnCatalogo').addEventListener('click', mostrarCatalogo);
-
-      const btnDash = document.getElementById('btnDashboard');
-      if (role === 'admin') {
-        btnDash.style.display = '';
-        btnDash.addEventListener('click', mostrarDashboard);
-      } else {
-        btnDash.style.display = 'none';
-      }
-
-      mostrarCatalogo();
-      carregarProdutos();
+  // Gráfico (opcional)
+  function desenharGraficoVendas() {
+    const ctx = document.getElementById("chartVendas");
+    if (!ctx) return;
+    if (window.__graficoVendas) window.__graficoVendas.destroy();
+    window.__graficoVendas = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Jan","Fev","Mar","Abr","Mai","Jun"],
+        datasets: [{ label: "Vendas (R$)", data: [1200,1750,1600,2100,1950,2500] }]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
-  </script>
+  }
+
+  // Boot
+  document.addEventListener("DOMContentLoaded", () => {
+    const usuario = localStorage.getItem("usuario");
+    const role = localStorage.getItem("role") || "cliente";
+    if (!usuario) {
+      alert("Você precisa fazer login primeiro.");
+      location.href = `${repo}/login.html`;
+      return;
+    }
+
+    // UI
+    const w = document.getElementById("welcome-name");
+    if (w) w.textContent = usuario;
+    const r = document.getElementById("role-label");
+    if (r) r.textContent = role === "admin" ? "Administrador" : "Cliente";
+
+    // Sair
+    const btnSair = document.getElementById("btnSair");
+    if (btnSair) btnSair.onclick = () => { localStorage.clear(); location.href = `${repo}/login.html`; };
+
+    // Navegação
+    document.getElementById("btnInicio")?.addEventListener("click", mostrarCatalogo);
+    document.getElementById("btnCatalogo")?.addEventListener("click", mostrarCatalogo);
+    const btnDash = document.getElementById("btnDashboard");
+    if (btnDash) {
+      if (role === "admin") { btnDash.style.display = ""; btnDash.onclick = mostrarDashboard; }
+      else { btnDash.style.display = "none"; }
+    }
+
+    // Exibe catálogo e busca dados
+    mostrarCatalogo();
+    carregarProdutos();
+  });
+</script>
+
+
 </body>
 </html>
