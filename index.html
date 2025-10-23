@@ -118,7 +118,9 @@
   </main>
 
   <script>
-    const API_URL = 'http://localhost:8080/produtos';
+    const API_URL = location.hostname.includes('localhost')
+  ? 'http://localhost:8080/produtos'
+  : 'https://projeto-loja-religiosa.onrender.com/produtos'; // <-- substitua pelo link da API no Render
 
     async function carregarProdutos() {
       try {
