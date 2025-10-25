@@ -108,6 +108,12 @@
         <button id="btnInicio" type="button">🏠 Início</button>
         <button id="btnCatalogo" type="button">📖 Catálogo</button>
         <button id="btnDashboard" type="button" style="display:none;">📊 Dashboard</button>
+
+        <!-- Carrinho -->
+        <button id="btnCarrinho" type="button">
+          🛒 Carrinho
+          <span id="cart-count" style="margin-left:8px;background:#0ea5e9;color:#fff;border-radius:10px;padding:1px 8px;font-weight:800">0</span>
+        </button>
       </nav>
     </div>
 
@@ -123,97 +129,260 @@
     <h1>Catálogo de Produtos</h1>
     <p id="boas-vindas"></p>
 
+    <!-- Catálogo -->
     <div id="produtos" class="grid"></div>
 
+    <!-- Carrinho -->
+    <section id="sec-carrinho" style="display:none;margin-top:26px;background:var(--card);border:1px solid #e2e8f0;border-radius:16px;padding:18px;box-shadow:var(--shadow)">
+      <h2 style="margin:0 0 12px">Seu Carrinho</h2>
+
+      <div id="cart-empty" style="color:var(--muted);margin-bottom:12px;display:none">
+        Seu carrinho está vazio. Que tal voltar ao catálogo e escolher algo? 🙂
+      </div>
+
+      <div style="overflow:auto">
+        <table id="cart-table" style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="text-align:left;color:var(--muted);font-size:.9rem">
+              <th style="padding:8px 6px;border-bottom:1px solid #e2e8f0">Produto</th>
+              <th style="padding:8px 6px;border-bottom:1px solid #e2e8f0">Preço</th>
+              <th style="padding:8px 6px;border-bottom:1px solid #e2e8f0">Qtd</th>
+              <th style="padding:8px 6px;border-bottom:1px solid #e2e8f0">Subtotal</th>
+              <th style="padding:8px 6px;border-bottom:1px solid #e2e8f0"></th>
+            </tr>
+          </thead>
+          <tbody id="cart-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:12px">
+        <button id="btnContinuar" class="btn" type="button" style="background:#475569">← Continuar comprando</button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <strong>Total: <span id="cart-total">R$ 0,00</span></strong>
+          <button id="btnCheckout" class="btn" type="button">Finalizar compra</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
     <section id="sec-dashboard">
       <h2>Dashboard de Vendas</h2>
       <canvas id="chartVendas" width="900" height="360"></canvas>
     </section>
   </main>
 
-  <script>
+<script>
   // Detecta o prefixo do repositório quando estiver no GitHub Pages (/projeto-loja-religiosa)
   const pathParts = location.pathname.split("/").filter(Boolean);
   const repo = pathParts.length > 0 ? `/${pathParts[0]}` : "";
 
-  // 🔗 Base da API: localhost em dev, Render em produção (sempre HTTPS)
+  // 🔗 Base da API: localhost em dev, Render em produção
   const API_BASE =
     location.hostname === "localhost" || location.hostname === "127.0.0.1"
       ? "http://localhost:8080"
       : "https://api-loja-religiosa.onrender.com";
 
-  // ➜ URL final dos produtos (NÃO deixe vazio)
-  const API_URL = `${API_BASE}/produtos`;
+  // ---------- CARRINHO ----------
+  const CART_KEY = "carrinho";
 
-  // Render do catálogo
+  function readCart() {
+    try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveCart(cart) {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    updateCartCount();
+  }
+  function cartCount() {
+    return readCart().reduce((acc, it) => acc + it.qtd, 0);
+  }
+  function updateCartCount() {
+    const el = document.getElementById("cart-count");
+    if (el) el.textContent = String(cartCount());
+  }
+  function addToCart(prod, qtd = 1) {
+    const cart = readCart();
+    const idx = cart.findIndex(i => String(i.id) === String(prod.id));
+    if (idx >= 0) cart[idx].qtd += qtd;
+    else cart.push({ id: String(prod.id), nome: prod.nome, preco: Number(prod.preco), imagem: prod.imagem || "", qtd });
+    saveCart(cart);
+    renderCartTable();
+  }
+  function setQty(id, qtd) {
+    const cart = readCart().map(i => String(i.id) === String(id) ? { ...i, qtd: Math.max(1, qtd) } : i);
+    saveCart(cart);
+    renderCartTable();
+  }
+  function incQty(id, delta) {
+    const cart = readCart().map(i => String(i.id) === String(id) ? { ...i, qtd: Math.max(1, i.qtd + delta) } : i);
+    saveCart(cart);
+    renderCartTable();
+  }
+  function removeItem(id) {
+    const cart = readCart().filter(i => String(i.id) !== String(id));
+    saveCart(cart);
+    renderCartTable();
+  }
+  function cartTotal() {
+    return readCart().reduce((acc, it) => acc + it.preco * it.qtd, 0);
+  }
+  function formatBRL(n) {
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  // ---------- CATÁLOGO ----------
   async function carregarProdutos() {
-    try {
-      console.log("[catálogo] API_URL =", API_URL); // <-- deve logar ...onrender.com/produtos
-      const res = await fetch(API_URL, { mode: "cors", cache: "no-store" });
-      console.log("[catálogo] status =", res.status);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const candidatos = [
+      `${API_BASE}/produtos`, // caso a API tenha endpoint /produtos
+      `${API_BASE}`           // fallback para JSON na raiz
+    ];
 
-      const produtos = await res.json();
-      const el = document.getElementById("produtos");
+    let produtos = null;
+    let ultimoErro = null;
 
-      el.innerHTML = produtos.map(p => {
-        const imgSrc = p.imagem && p.imagem.startsWith("http")
-          ? p.imagem
-          : `${repo}/${String(p.imagem || "").replace(/^\/?/, "")}`;
+    for (const url of candidatos) {
+      try {
+        const res = await fetch(url, { mode: "cors", cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-        return `
-          <div class="card">
-            <div class="thumb">
-              <img
-                src="${imgSrc}"
-                alt="${p.nome}"
-                referrerpolicy="no-referrer"
-                onerror="this.onerror=null; this.src='https://picsum.photos/seed/erro/600/450';"
-              />
-            </div>
-            <h3>${p.nome}</h3>
-            <p>${p.descricao}</p>
-            <div class="meta">
-              <span class="price">R$ ${Number(p.preco).toFixed(2)}</span>
-              <button class="btn" type="button">Comprar</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    } catch (e) {
-      console.error("[catálogo] falha ao buscar API:", e);
+        if (Array.isArray(data)) { // raiz é array
+          produtos = data;
+          break;
+        }
+        if (data && Array.isArray(data.produtos)) { // dentro de { produtos: [...] }
+          produtos = data.produtos;
+          break;
+        }
+      } catch (e) {
+        ultimoErro = e;
+      }
+    }
+
+    if (!produtos) {
+      console.error("[catálogo] falha ao buscar produtos:", ultimoErro);
       document.getElementById("produtos").innerHTML =
         `<p style="color:#dc2626">Erro ao carregar produtos.</p>`;
+      return;
     }
+
+    window.__produtos = produtos;
+    const el = document.getElementById("produtos");
+
+    el.innerHTML = produtos.map(p => {
+      const imgSrc = p.imagem && p.imagem.startsWith("http")
+        ? p.imagem
+        : `${repo}/${String(p.imagem || "").replace(/^\/?/, "")}`;
+
+      return `
+        <div class="card" data-id="${p.id}">
+          <div class="thumb">
+            <img
+              src="${imgSrc}"
+              alt="${p.nome}"
+              referrerpolicy="no-referrer"
+              onerror="this.onerror=null; this.src='https://picsum.photos/seed/erro/600/450';"
+            />
+          </div>
+          <h3>${p.nome}</h3>
+          <p>${p.descricao ?? ""}</p>
+          <div class="meta">
+            <span class="price">${formatBRL(Number(p.preco))}</span>
+            <button class="btn btn-add" type="button" data-id="${p.id}">Adicionar</button>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
-  // Alterna seções
+  // ---------- NAVEGAÇÃO ----------
+  function hideAll() {
+    document.getElementById("produtos").style.display = "none";
+    const dash = document.getElementById("sec-dashboard");
+    if (dash) dash.style.display = "none";
+    const carr = document.getElementById("sec-carrinho");
+    if (carr) carr.style.display = "none";
+  }
+  function setTitulo(t) { const h = document.querySelector("main h1"); if (h) h.textContent = t; }
+
   function mostrarCatalogo() {
+    hideAll();
     document.getElementById("produtos").style.display = "";
-    document.getElementById("sec-dashboard")?.style && (document.getElementById("sec-dashboard").style.display = "none");
+    setTitulo("Catálogo de Produtos");
   }
   function mostrarDashboard() {
-    document.getElementById("produtos").style.display = "none";
-    document.getElementById("sec-dashboard").style.display = "";
+    hideAll();
+    const dash = document.getElementById("sec-dashboard");
+    if (dash) dash.style.display = "";
+    setTitulo("Dashboard de Vendas");
     desenharGraficoVendas();
   }
+  function mostrarCarrinho() {
+    hideAll();
+    const carr = document.getElementById("sec-carrinho");
+    if (carr) carr.style.display = "";
+    setTitulo("Seu Carrinho");
+    renderCartTable();
+  }
 
-  // Gráfico (opcional)
+  // ---------- CARRINHO ----------
+  function renderCartTable() {
+    const tbody = document.getElementById("cart-body");
+    const empty = document.getElementById("cart-empty");
+    const totalEl = document.getElementById("cart-total");
+    if (!tbody || !empty || !totalEl) return;
+
+    const cart = readCart();
+    if (cart.length === 0) {
+      empty.style.display = "";
+      tbody.innerHTML = "";
+      totalEl.textContent = formatBRL(0);
+      updateCartCount();
+      return;
+    }
+    empty.style.display = "none";
+
+    tbody.innerHTML = cart.map(item => `
+      <tr>
+        <td style="padding:10px 6px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px">
+          <img src="${item.imagem?.startsWith('http') ? item.imagem : (item.imagem ? (repo + '/' + item.imagem.replace(/^\/?/, '')) : 'https://picsum.photos/seed/p/60/60')}"
+               alt="${item.nome}" style="width:56px;height:42px;object-fit:cover;border-radius:8px;background:#f1f5f9">
+          <strong>${item.nome}</strong>
+        </td>
+        <td style="padding:10px 6px;border-bottom:1px solid #e2e8f0">${formatBRL(item.preco)}</td>
+        <td style="padding:10px 6px;border-bottom:1px solid #e2e8f0">
+          <div style="display:inline-flex;align-items:center;gap:6px">
+            <button class="btn btn-qtd" data-act="dec" data-id="${item.id}" type="button">−</button>
+            <input type="number" min="1" value="${item.qtd}" data-id="${item.id}" class="inp-qtd">
+            <button class="btn btn-qtd" data-act="inc" data-id="${item.id}" type="button">+</button>
+          </div>
+        </td>
+        <td style="padding:10px 6px;border-bottom:1px solid #e2e8f0;font-weight:700">
+          ${formatBRL(item.preco * item.qtd)}
+        </td>
+        <td style="padding:10px 6px;border-bottom:1px solid #e2e8f0">
+          <button class="btn" data-act="rm" data-id="${item.id}" type="button" style="background:#dc2626">Remover</button>
+        </td>
+      </tr>
+    `).join("");
+
+    totalEl.textContent = formatBRL(cartTotal());
+    updateCartCount();
+  }
+
+  // ---------- GRÁFICO ----------
   function desenharGraficoVendas() {
     const ctx = document.getElementById("chartVendas");
     if (!ctx) return;
     if (window.__graficoVendas) window.__graficoVendas.destroy();
     window.__graficoVendas = new Chart(ctx, {
       type: "bar",
-      data: {
-        labels: ["Jan","Fev","Mar","Abr","Mai","Jun"],
-        datasets: [{ label: "Vendas (R$)", data: [1200,1750,1600,2100,1950,2500] }]
-      },
+      data: { labels: ["Jan","Fev","Mar","Abr","Mai","Jun"], datasets: [{ label: "Vendas (R$)", data: [1200,1750,1600,2100,1950,2500] }] },
       options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
   }
 
-  // Boot
+  // ---------- BOOT ----------
   document.addEventListener("DOMContentLoaded", () => {
     const usuario = localStorage.getItem("usuario");
     const role = localStorage.getItem("role") || "cliente";
@@ -224,30 +393,57 @@
     }
 
     // UI
-    const w = document.getElementById("welcome-name");
-    if (w) w.textContent = usuario;
-    const r = document.getElementById("role-label");
-    if (r) r.textContent = role === "admin" ? "Administrador" : "Cliente";
+    document.getElementById("welcome-name").textContent = usuario;
+    document.getElementById("role-label").textContent = role === "admin" ? "Administrador" : "Cliente";
 
-    // Sair
-    const btnSair = document.getElementById("btnSair");
-    if (btnSair) btnSair.onclick = () => { localStorage.clear(); location.href = `${repo}/login.html`; };
+    document.getElementById("btnSair").onclick = () => { localStorage.clear(); location.href = `${repo}/login.html`; };
 
-    // Navegação
     document.getElementById("btnInicio")?.addEventListener("click", mostrarCatalogo);
     document.getElementById("btnCatalogo")?.addEventListener("click", mostrarCatalogo);
     const btnDash = document.getElementById("btnDashboard");
     if (btnDash) {
       if (role === "admin") { btnDash.style.display = ""; btnDash.onclick = mostrarDashboard; }
-      else { btnDash.style.display = "none"; }
+      else btnDash.style.display = "none";
     }
+    document.getElementById("btnCarrinho")?.addEventListener("click", mostrarCarrinho);
+    document.getElementById("btnContinuar")?.addEventListener("click", mostrarCatalogo);
+    document.getElementById("btnCheckout")?.addEventListener("click", () => {
+      alert(`Checkout de demonstração 🤍\nTotal: ${formatBRL(cartTotal())}`);
+    });
 
-    // Exibe catálogo e busca dados
+    // Eventos de catálogo
+    document.getElementById("produtos")?.addEventListener("click", ev => {
+      const btn = ev.target.closest(".btn-add");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const prod = (window.__produtos || []).find(p => String(p.id) === String(id));
+      if (!prod) return alert("Produto não encontrado.");
+      addToCart(prod, 1);
+      btn.textContent = "Adicionado! ✓";
+      setTimeout(() => (btn.textContent = "Adicionar"), 900);
+    });
+
+    // Eventos de carrinho
+    document.getElementById("sec-carrinho")?.addEventListener("click", ev => {
+      const b = ev.target.closest("button");
+      if (!b) return;
+      const id = b.dataset.id;
+      if (b.dataset.act === "inc") incQty(id, +1);
+      if (b.dataset.act === "dec") incQty(id, -1);
+      if (b.dataset.act === "rm") removeItem(id);
+    });
+    document.getElementById("sec-carrinho")?.addEventListener("change", ev => {
+      const inp = ev.target.closest(".inp-qtd");
+      if (!inp) return;
+      const id = inp.dataset.id;
+      setQty(id, Math.max(1, Number(inp.value || 1)));
+    });
+
+    updateCartCount();
     mostrarCatalogo();
     carregarProdutos();
   });
 </script>
-
 
 </body>
 </html>
