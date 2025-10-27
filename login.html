@@ -4,119 +4,38 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login | Loja Religiosa</title>
+
+  <!-- Fonte -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f1f5f9;
-      font-family: "Inter", sans-serif;
-      color: #0f172a;
-    }
 
-    .login-box {
-      background: white;
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, .1);
-      width: 100%;
-      max-width: 380px;
-      text-align: center;
-    }
-
-    h1 {
-      margin-bottom: 28px;
-      font-size: 1.6rem;
-      color: #0ea5e9;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      font-size: 1rem;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #0ea5e9;
-      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25);
-    }
-
-    label {
-      font-size: 0.9rem;
-      color: #475569;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 6px;
-      margin-bottom: 20px;
-    }
-
-    button {
-      width: 100%;
-      background: #0ea5e9;
-      color: white;
-      padding: 12px;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
-
-    button:hover {
-      background: #0284c7;
-    }
-
-    p {
-      font-size: 0.85rem;
-      color: #64748b;
-      margin-top: 16px;
-    }
-  </style>
+  <!-- Estilos -->
+  <link rel="stylesheet" href="assets/css/login.css" />
 </head>
 <body>
   <div class="login-box">
     <h1>✝ Loja Religiosa</h1>
 
-    <form id="formLogin">
+    <form id="formLogin" autocomplete="on">
       <input type="text" id="usuario" placeholder="Usuário" required />
       <input type="password" id="senha" placeholder="Senha" required />
 
-      <label>
-        <input type="checkbox" id="souAdmin" />
-        Sou administrador
-      </label>
+      <div class="checkbox-container">
+        <input type="checkbox" id="souAdmin" hidden />
+        <label for="souAdmin">
+          <!-- Ícone de escudo -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 3l8.485 3.515a1 1 0 01.515.869V11c0 5.523-4.477 10-10 10S1 16.523 1 11V7.384a1 1 0 01.515-.869L10 3h2z" />
+          </svg>
+          Sou administrador
+        </label>
+      </div>
 
       <button type="submit">Entrar</button>
     </form>
-
-    <p>Para teste: marque “Sou administrador” e entre com qualquer usuário/senha.</p>
   </div>
 
-  <script>
-    document.getElementById("formLogin").addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const usuario = document.getElementById("usuario").value || "Visitante";
-      const isAdmin = document.getElementById("souAdmin").checked;
-
-      localStorage.setItem("usuario", usuario);
-      localStorage.setItem("role", isAdmin ? "admin" : "cliente");
-
-      // Detecta se está rodando no GitHub Pages (em subpasta)
-      const pathParts = location.pathname.split("/").filter(Boolean);
-      const repo = pathParts.length > 0 ? `/${pathParts[0]}` : "";
-
-      // Caminho relativo seguro para o GitHub Pages
-      window.location.href = `${repo}/index.html`;
-    });
-  </script>
+  <!-- Script -->
+  <script src="assets/js/login.js" defer></script>
 </body>
 </html>

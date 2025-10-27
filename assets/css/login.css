@@ -1,0 +1,118 @@
+:root {
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #0ea5e9;
+  --accent: #eab308;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .1);
+  --radius: 20px;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+}
+
+.login-box {
+  background: var(--card);
+  padding: 40px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  animation: fadeInUp .6s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+  margin: 0 0 28px;
+  font-size: 1.6rem;
+  color: var(--primary);
+  font-weight: 800;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, .25);
+}
+
+/* Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0 20px;
+  color: #475569;
+  font-size: .95rem;
+  user-select: none;
+}
+
+.checkbox-container label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color .3s ease;
+}
+
+.checkbox-container svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+  transition: color .3s ease, transform .3s ease, filter .3s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-container label:hover svg {
+  color: var(--accent);
+  transform: rotate(-8deg) scale(1.1);
+}
+
+#souAdmin:checked + label svg {
+  color: var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent));
+  transform: scale(1.15);
+}
+
+/* Botão */
+button {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  padding: 12px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: filter .2s ease, transform .1s ease;
+}
+
+button:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
